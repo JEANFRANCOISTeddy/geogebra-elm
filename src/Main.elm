@@ -44,6 +44,8 @@ oneCharParsed =
     chompIf Char.isAlpha
         |> getChompedString
 
+-- removeAllSpaces : Parser ()
+
 type alias Point =
     { name: String
     , x : Float
