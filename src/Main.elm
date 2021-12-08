@@ -54,12 +54,21 @@ pointParser : Parser Point
 pointParser =
   succeed Point
     |= oneCharParsed
+    |. spaces
     |. symbol "="
+    |. spaces
     |. symbol "("
     |= float
     |. symbol ","
+    |. spaces
     |= float
     |. symbol ")"
+
+type alias Segment =
+    { name: String
+    , x : Point
+    , y : Point
+    }
 
 init : Model
 init =
