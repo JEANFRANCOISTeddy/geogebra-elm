@@ -46,6 +46,19 @@ oneCharParsed =
 
 -- removeAllSpaces : Parser ()
 
+findShapeType : String -> String
+findShapeType command = 
+    case String.toList command of
+        myList ->
+            if List.all (\c -> List.member c myList) (String.toList "(,)") then 
+                "Point"
+            else if List.all (\c -> List.member c myList) (String.toList "[,]") then 
+                "Segment"
+            else if List.all (\c -> List.member c myList) (String.toList "circle") then 
+                "Circle"
+            else 
+                ""
+
 type alias Point =
     { name: String
     , x : Float
@@ -72,13 +85,47 @@ type alias Segment =
     , y : Point
     }
 
+segmentParser : Parser Segment
+segmentParser =
+  succeed Segment
+    |= oneCharParsed
+    |. spaces
+    |. symbol "="
+    |. spaces
+    |. symbol "["
+    |= pointParser
+    |. symbol ","
+    |. spaces
+    |= pointParser
+    |. symbol "]"
+
+type alias Circle =
+    { name: String
+    , x : Point
+    , radius : Float
+    }
+
+circleParser : Parser Circle
+circleParser =
+    succeed Circle
+        |= oneCharParsed
+        |. spaces
+        |. symbol "="
+        |. spaces
+        |. symbol "("
+        |= pointParser
+        |. symbol ","
+        |. spaces
+        |= float
+        |. symbol ")"
+
 init : Model
 init =
     { commandInput = ""
     , history = []
     }
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> Model 
 update msg model =
     case msg of
         CommandEntered command ->
@@ -97,7 +144,7 @@ view model =
     column [ width fill, height fill ]
         [ el [ width fill, height fill ]
             (el [ Border.width 2, padding 2, centerX, centerY ]
-                (Element.html (Collage.Render.svgBox ( 800, 800 ) (viewShapes model)))
+                (Element.html (Collage.Render.svgBox ( 800, 800 ) (viewShapes model)) )
             )
         , row [ width fill, height (px 50) ]
             [ el [] (text "Your command: ")
@@ -118,18 +165,46 @@ view model =
 viewShapes : Model -> Collage Msg
 viewShapes model =
     -- TODO: change this function! Here are some examples to draw basic shapes.
-    case run pointParser model.commandInput of 
-        Ok point ->
-            Collage.group
-                [
-                    Collage.circle 3
-                        |> Collage.filled (Collage.uniform Color.black)
-                        |> Collage.shift ( point.x, point.y )
-                    , Collage.Text.fromString point.name
-                        |> Collage.rendered
-                        |> Collage.shift ( point.x + 15, point.y + 3 )
-                ] 
-        Err err -> Collage.group [ ] 
+    if (findShapeType model.commandInput) == "Point" then 
+        case run pointParser model.commandInput of 
+            Ok point ->
+                Collage.group
+                    [
+                        Collage.circle 3
+                            |> Collage.filled (Collage.uniform Color.black)
+                            |> Collage.shift ( point.x, point.y )
+                        , Collage.Text.fromString point.name
+                            |> Collage.rendered
+                            |> Collage.shift ( point.x + 15, point.y + 3 )
+                    ] 
+            Err err -> Collage.group [ ] 
+    else if (findShapeType model.commandInput) == "Segment" then 
+        case run segmentParser model.commandInput of 
+            Ok segment ->
+                Collage.group
+                    [
+                        Collage.segment ( segment.x.x, segment.x.y ) ( segment.y.x, segment.y.y )
+                            |> Collage.traced (Collage.solid 1 (Collage.uniform Color.black))
+                        , Collage.Text.fromString segment.name
+                            |> Collage.rendered
+                            |> Collage.shift ( 35, 50 )
+                    ] 
+            Err err -> Collage.group [ ] 
+    else if (findShapeType model.commandInput) == "Circle" then 
+        case run circleParser model.commandInput of 
+            Ok circle ->
+                Collage.group
+                    [
+                        Collage.circle circle.radius
+                            |> Collage.outlined (Collage.solid 1 (Collage.uniform Color.black))
+                            |> Collage.shift ( circle.x.x, circle.x.y )
+                        , Collage.Text.fromString circle.name
+                            |> Collage.rendered
+                            |> Collage.shift ( 10, -100 )
+                    ] 
+            Err err -> Collage.group [ ] 
+    else 
+        Collage.group [ ] 
     
 onEnter : msg -> Element.Attribute msg
 onEnter msg =
