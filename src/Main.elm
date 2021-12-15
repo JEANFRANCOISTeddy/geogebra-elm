@@ -44,18 +44,32 @@ oneCharParsed =
     chompIf Char.isAlpha
         |> getChompedString
 
+circleParsed : Parser String
+circleParsed =
+    getChompedString (chompUntil "circle")
+
 -- removeAllSpaces : Parser ()
+
+validateList : String -> List Char -> Bool
+validateList stringVerif myList = 
+    if List.all (\c -> List.member c myList) (String.toList stringVerif) then 
+        True
+    else
+        False
+
 
 findShapeType : String -> String
 findShapeType command = 
     case String.toList command of
         myList ->
-            if List.all (\c -> List.member c myList) (String.toList "(,)") then 
+            if validateList "(,)" myList then 
                 "Point"
-            else if List.all (\c -> List.member c myList) (String.toList "[,]") then 
+            else if validateList "[,]" myList then 
                 "Segment"
-            else if List.all (\c -> List.member c myList) (String.toList "circle") then 
+            else if validateList "circle" myList then 
                 "Circle"
+            else if validateList "circle" myList then 
+                "CircleCoordinate"
             else 
                 ""
 
@@ -114,6 +128,33 @@ circleParser =
         |. spaces
         |. symbol "("
         |= pointParser
+        |. symbol ","
+        |. spaces
+        |= float
+        |. symbol ")"
+
+type alias CircleCoordinate =
+    { name: String
+    , x : Float
+    , y : Float
+    , radius : Float
+    }
+
+circleCoordinateParser : Parser CircleCoordinate
+circleCoordinateParser =
+    succeed CircleCoordinate
+        |= oneCharParsed
+        |. spaces
+        |. symbol "="
+        |. spaces
+        |. circleParsed
+        |. symbol "("
+        |. symbol "("
+        |= float
+        |. symbol ","
+        |. spaces
+        |= float
+        |. symbol ")"
         |. symbol ","
         |. spaces
         |= float
@@ -202,7 +243,18 @@ viewShapes model =
                             |> Collage.rendered
                             |> Collage.shift ( 10, -100 )
                     ] 
-            Err err -> Collage.group [ ] 
+            Err err -> Collage.group [ ]
+    else if (findShapeType model.commandInput) == "CircleCoordinate" then 
+        
+                Collage.group
+                    [
+                        Collage.circle 17
+                            |> Collage.outlined (Collage.solid 1 (Collage.uniform Color.black))
+                            |> Collage.shift ( 67, 76 )
+                        , Collage.Text.fromString "hbhjb"
+                            |> Collage.rendered
+                            |> Collage.shift ( 10, -100 )
+                    ] 
     else 
         Collage.group [ ] 
     
